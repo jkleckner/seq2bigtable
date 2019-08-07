@@ -4,18 +4,12 @@ import java.io.IOException
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 
-//import scala.reflect._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-//import org.apache.hadoop.hbase.io.ImmutableBytesWritable
-//import org.apache.hadoop.io.serializer.WritableSerialization
-//import org.apache.hadoop.hive.hbase.ResultWritable
-//import org.apache.hadoop.io.IntWritable
 import org.apache.hadoop.io.SequenceFile
 import org.apache.hadoop.io.SequenceFile.Reader
-//import org.apache.hadoop.io.Text
 import org.apache.hadoop.hbase.client.Result
-// Note that this requires hbase-server jar file:
+// Note that this requires hbase-mapreduce jar file:
 import org.apache.hadoop.hbase.mapreduce.{MutationSerialization, ResultSerialization}
 
 import collection.JavaConversions._
@@ -32,68 +26,55 @@ object Main extends App {
 //    ByteString.copyFrom(byteBuffer.array())
 //  }
 
-  override def main(args: Array[String]): Unit = {
-    super.main(args)
-    println("Hello, World!")
-    val seqFile: String = args(0)
-    val tableName: String = args(1)
-    val conf: Configuration = new Configuration()
-//    val curSers: String = conf.get("io.serializations")
-////    val xoo = this.getClass.getName
-////    val foo = MutationSerialization.getClass.getName
-////    val bar = ResultSerialization..getName
-////    val ct = classTag[ResultSerialization]
-////    val co = classOf[ResultSerialization].getName
-////    val tt = typeTag[ResultSerialization]
-//    val newSers: Array[String] = Array[String] (
-//      curSers,
-//      classOf[ResultSerialization].getName,
-//      classOf[MutationSerialization].getName
-//      "org.apache.hadoop.hbase.mapreduce.MutationSerialization",
-//      "org.apache.hadoop.hbase.mapreduce.ResultSerialization"
-//    )
-    // conf.setStrings("io.serializations", newSers)
-    // conf.setStrings("io.serializations", curSers, "org.apache.hadoop.hbase.mapreduce.MutationSerialization", "org.apache.hadoop.hbase.mapreduce.ResultSerialization")
-    conf.setStrings(
-      "io.serializations",
-      conf.get("io.serializations"),
-      classOf[MutationSerialization].getName,
-      classOf[ResultSerialization].getName
-    )
-    println(s"debug: classOf[ResultSerialization].getName ${classOf[ResultSerialization].getName}")
-    println(s"""debug: conf.get("io.serializations") ${conf.get("io.serializations")}""")
-    // debug: conf.get("io.serializations")
-    // org.apache.hadoop.io.serializer.WritableSerialization,
-    // org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,
-    // org.apache.hadoop.io.serializer.avro.AvroReflectSerialization,
-    // org.apache.hadoop.hbase.mapreduce.ResultSerialization,
-    // org.apache.hadoop.hbase.mapreduce.MutationSerialization
-    // conf.setStrings("io.serializations", new String[]{conf.get("io.serializations"), MutationSerialization.class.getName(), ResultSerialization.class.getName()});invokekk
-//    conf.setStrings("io.serializations", new String{conf.get("io.serializations"), MutationSerialization.class.getName(), ResultSerialization.class.getName()}) //invokekk
+  val seqFile: String = args(0)
+  val tableName: String = args(1)
+  println(s"Reading Sequence file $seqFile and writing to table $tableName")
+  val conf: Configuration = new Configuration()
+  conf.setStrings(
+    "io.serializations",
+    conf.get("io.serializations"),
+    classOf[MutationSerialization].getName,
+    classOf[ResultSerialization].getName
+  )
+//  println(s"debug: classOf[ResultSerialization].getName ${classOf[ResultSerialization].getName}")
+//  println(s"""debug: conf.get("io.serializations") ${conf.get("io.serializations")}""")
 
+  try {
+    val inFile: Path = new Path(seqFile)
+    var reader: SequenceFile.Reader = null
+    val vBytes = "v".getBytes
     try {
-      val inFile: Path = new Path(seqFile)
-      var reader: SequenceFile.Reader = null
-      try {
-        val key = new ImmutableBytesWritable()
-//         val value = new ResultWritable()
-//        val value = new Result()
-        val value = new ImmutableBytesWritable() // Result()
-        reader = new SequenceFile.Reader(conf, Reader.file(inFile), Reader.bufferSize(4096))
-        while(reader.next(key, value)) {
-          System.out.println("Key " + key + "Value " + value)
-        }
-
-      } finally {
-        if(reader != null) {
-          reader.close()
+      val key = new ImmutableBytesWritable()
+      reader = new SequenceFile.Reader(conf, Reader.file(inFile), Reader.bufferSize(4096))
+      while(reader.next(key)) {
+        println("Key " + new String(key.get()))
+        val value = reader.getCurrentValue(new Result)
+        println("Value " + value)
+        val cell = value.asInstanceOf[Result].getColumnLatestCell(vBytes, vBytes)
+        if (cell != null) {
+          val len = cell.getRowLength
+          System.out.println("len " + len)
+          val foo = cell.getRowArray//getColumnLatestCell(vBytes, vBytes).getValueArray
+          System.out.println(new String(foo))
+        } else {
+          System.out.println("cell is null")
         }
       }
-    } catch {
-      case e: IOException =>
-        e.printStackTrace()
-      // TODO Auto-generated catch bloc
+    } finally {
+      if(reader != null) {
+        reader.close()
+      }
     }
+  } catch {
+    case _: InterruptedException =>
+      // Ignore the InterruptedException
+      ()
+    case e: IOException =>
+      e.printStackTrace()
+    // TODO Auto-generated catch bloc
+    case t: Throwable =>
+      t.printStackTrace()
+    // TODO Auto-generated catch bloc
   }
 
   /*
