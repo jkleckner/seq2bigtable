@@ -23,9 +23,34 @@ version := "1.0"
 
 // Want to use a published library in your project?
 // You can define other libraries as dependencies in your build like this:
-libraryDependencies += "org.typelevel" %% "cats-core" % "1.6.0"
 
-// libraryDependencies += "org.typelevel" %% "cats-core" % "1.6.0"
+// https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-1.x-shaded
+// libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-1.x" % "1.12.0"
+ libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-1.x-shaded" % "1.12.0"
+// https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x
+//libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-2.x" % "1.12.0"
+//libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase" % "1.12.0"
+// https://mvnrepository.com/artifact/org.apache.hbase/hbase-server
+libraryDependencies += "org.apache.hbase" % "hbase-server" % "1.4.10" // For ResultSerialization
+// libraryDependencies += "org.apache.hbase" % "hbase-server" % "2.1.5" // For ResultSerialization
+//libraryDependencies += "org.apache.hbase" % "hbase-mapreduce" % "2.1.5" // For ResultSerialization
+// libraryDependencies += "org.apache.hbase" % "hbase-server" % "2.2.0" // For ResultSerialization
+//libraryDependencies += "com.google.cloud" % "google-cloud-bigtable" % "0.101.0"
+// https://mvnrepository.com/artifact/org.apache.hive/hive-hbase-handler
+//libraryDependencies += "org.apache.hive" % "hive-hbase-handler" % "1.2.1"
+//libraryDependencies += "org.apache.hive" % "hive-hbase-handler" % "1.2.2"
+//libraryDependencies += "org.apache.hive" % "hive-hbase-handler" % "2.3.5"
+//libraryDependencies += "org.apache.hive" % "hive-hbase-handler" % "3.1.1"
+// https://mvnrepository.com/artifact/org.spark-project.hive/hive-hbase-handler
+//libraryDependencies += "org.spark-project.hive" % "hive-hbase-handler" % "1.2.1.spark2"
+
+// https://mvnrepository.com/artifact/org.pentaho/pentaho-aggdesigner-algorithm
+//libraryDependencies += "org.pentaho" % "pentaho-aggdesigner-algorithm" % "5.1.5-jhyde" // % Test
+
+// See: https://stackoverflow.com/a/49242622
+//resolvers += Resolver.mavenLocal
+//resolvers += "Cascading repo" at "http://conjars.org/repo"
+
 
 // Here, `libraryDependencies` is a set of dependencies, and by using `+=`,
 // we're adding the cats dependency to the set of dependencies that sbt will go
@@ -78,5 +103,23 @@ libraryDependencies += "org.typelevel" %% "cats-core" % "1.6.0"
 
 mainClass in assembly := Some("com.cphy.seq2bigtable.Main")
 
-test in (Test, assembly) := {}
+enablePlugins(JavaAppPackaging)
 
+//test in (Test, assembly) := {}
+test in assembly := {}
+
+assemblyMergeStrategy in assembly := {
+  // https://stackoverflow.com/questions/54625572/sbt-assembly-errordeduplicate-different-file-contents-found-in-io-netty-versio#comment96046026_54625572
+  case "META-INF/io.netty.versions.properties" => MergeStrategy.first
+  case PathList("javax", xs @ _*) => MergeStrategy.first
+  case PathList("org", xs @ _*)   => MergeStrategy.first
+  case "mozilla/public-suffix-list.txt" => MergeStrategy.first
+//  case PathList("javolution", xs @ _*)   => MergeStrategy.discard
+//  case PathList("org", xs @ _*)   => MergeStrategy.first
+//  // Discard module_info.class if using Java 8.  Revisit when upgraded. See: https://stackoverflow.com/a/55557287
+//  // https://github.com/sbt/sbt-assembly/issues/370#issuecomment-496502318
+//  case PathList("module-info.class") => MergeStrategy.discard
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
