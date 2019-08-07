@@ -20,7 +20,7 @@ import collection.JavaConversions._
 //import com.google.protobuf.ByteString
 //import java.nio.ByteBuffer
 
-object Main {
+object Seq2Bigtable {
 
   def main(args: Array[String]): Unit = {
     val seqFile: String = args(0)

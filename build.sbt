@@ -49,7 +49,7 @@ libraryDependencies += "org.apache.hbase" % "hbase-mapreduce" % "2.2.0" // For R
 // To learn more about multi-project builds, head over to the official sbt
 // documentation at http://www.scala-sbt.org/documentation.html
 
-mainClass in assembly := Some("com.cphy.seq2bigtable.Main")
+mainClass in assembly := Some("com.cphy.seq2bigtable.Seq2Bigtable")
 
 enablePlugins(JavaAppPackaging)
 
