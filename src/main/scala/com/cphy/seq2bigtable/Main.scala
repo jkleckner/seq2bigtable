@@ -42,22 +42,22 @@ object Main extends App {
   try {
     val inFile: Path = new Path(seqFile)
     var reader: SequenceFile.Reader = null
-    val vBytes = "v".getBytes
     try {
       val key = new ImmutableBytesWritable()
       reader = new SequenceFile.Reader(conf, Reader.file(inFile), Reader.bufferSize(4096))
       while(reader.next(key)) {
         println("Key " + new String(key.get()))
-        val value = reader.getCurrentValue(new Result)
+        val value: Result = reader.getCurrentValue(new Result).asInstanceOf[Result]
         println("Value " + value)
-        val cell = value.asInstanceOf[Result].getColumnLatestCell(vBytes, vBytes)
-        if (cell != null) {
-          val len = cell.getRowLength
-          System.out.println("len " + len)
-          val foo = cell.getRowArray//getColumnLatestCell(vBytes, vBytes).getValueArray
-          System.out.println(new String(foo))
-        } else {
-          System.out.println("cell is null")
+        for {
+          cell <- value.listCells()
+        } {
+          // Debug printing for now
+          println(s"getFamilyArray; ${new String(cell.getFamilyArray)}")
+          println(s"getQualifierArray: ${new String(cell.getQualifierArray)}")
+          println(s"getTimestamp: ${cell.getTimestamp}")
+          println(s"getValueArray: ${new String(cell.getValueArray)}")
+          // wip
         }
       }
     } finally {
@@ -71,10 +71,8 @@ object Main extends App {
       ()
     case e: IOException =>
       e.printStackTrace()
-    // TODO Auto-generated catch bloc
     case t: Throwable =>
       t.printStackTrace()
-    // TODO Auto-generated catch bloc
   }
 
   /*
