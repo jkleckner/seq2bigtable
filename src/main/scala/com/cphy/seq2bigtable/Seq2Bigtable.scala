@@ -2,8 +2,8 @@ package com.cphy.seq2bigtable
 
 import java.io.IOException
 
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.SequenceFile
@@ -12,54 +12,120 @@ import org.apache.hadoop.hbase.client.Result
 // Note that this requires hbase-mapreduce jar file:
 import org.apache.hadoop.hbase.mapreduce.{MutationSerialization, ResultSerialization}
 
+import com.google.cloud.bigtable.admin.v2.models.CreateTableRequest
+import com.google.cloud.bigtable.admin.v2.{BigtableTableAdminClient, BigtableTableAdminSettings}
+import com.google.cloud.bigtable.data.v2.models.{BulkMutationBatcher, RowMutation}
+import com.google.cloud.bigtable.data.v2.{BigtableDataClient, BigtableDataSettings}
+import com.google.cloud.bigtable.admin.v2.models.GCRules
+
 import collection.JavaConversions._
 
-//import com.google.bigtable.v2.Mutation
-//import com.google.bigtable.v2.Mutation.SetCell
-//import com.google.common.collect.ImmutableList
-//import com.google.protobuf.ByteString
-//import java.nio.ByteBuffer
+import com.google.protobuf.ByteString
 
 object Seq2Bigtable {
 
+  // Usage: com.cphy.seq2bigtable.Seq2Bigtable <path-to-seq-file> <table-where-to-import> <column_family>
+  // Start and set the bigtable emulator environment variable BIGTABLE_EMULATOR_HOST before running with:
+  // gcloud beta emulators bigtable start &
+  // $(gcloud beta emulators bigtable env-init)
+
+  def toByteString(byteArray: Array[Byte]): ByteString = {
+    ByteString.copyFrom(byteArray)
+  }
+
   def main(args: Array[String]): Unit = {
+    val printData = true
     val seqFile: String = args(0)
     val tableName: String = args(1)
-    println(s"Reading Sequence file $seqFile and writing to table $tableName")
-    val conf: Configuration = new Configuration()
-    conf.setStrings(
+    val columnFamily: String = args(2)
+    println(s"Reading Sequence file $seqFile and writing to table $tableName in column family: $columnFamily")
+    val appConfig: Config = ConfigFactory.load()
+    val bigtableEmulatorHost = appConfig.getString("seq2bigtable.emulator_host")
+    val bigtableEmulatorPort: Int = bigtableEmulatorHost.split(":")(1).toInt
+    println(s"bigtableEmulatorPort: $bigtableEmulatorPort")
+    val debugPrintTakeBytes: Int = 256
+
+    val hadoopConfig: Configuration = new Configuration()
+    hadoopConfig.setStrings(
       "io.serializations",
-      conf.get("io.serializations"),
+      hadoopConfig.get("io.serializations"),
       classOf[MutationSerialization].getName,
       classOf[ResultSerialization].getName
     )
     //  println(s"debug: classOf[ResultSerialization].getName ${classOf[ResultSerialization].getName}")
-    //  println(s"""debug: conf.get("io.serializations") ${conf.get("io.serializations")}""")
+    //  println(s"""debug: hadoopConfig.get("io.serializations") ${hadoopConfig.get("io.serializations")}""")
 
     try {
+      // hbase reader:
       val inFile: Path = new Path(seqFile)
       var reader: SequenceFile.Reader = null
+      // bigtable writer:
+      val dataSettings: BigtableDataSettings = BigtableDataSettings
+        .newBuilderForEmulator(bigtableEmulatorPort)
+        //    .setProjectId("different-project")
+        .build()
+      val dataClient: BigtableDataClient = BigtableDataClient.create(dataSettings)
+
+      val adminSettings: BigtableTableAdminSettings = BigtableTableAdminSettings
+        .newBuilderForEmulator(bigtableEmulatorPort)
+        //    .setProjectId("different-project")
+        .build()
+      val adminClient: BigtableTableAdminClient = BigtableTableAdminClient.create(adminSettings)
+
+      val bulkMutationBatcher: BulkMutationBatcher = dataClient.newBulkMutationBatcher()
+
+      println(s"Data project: ${adminClient.getProjectId} admin instance: ${adminClient.getInstanceId}")
+      println(s"Admin project: ${adminClient.getProjectId} admin instance: ${adminClient.getInstanceId}")
+
       try {
+        if (adminClient.exists(tableName)) {
+          println(s"Target table exists: $tableName")
+        } else {
+          println(s"Creating target table: $tableName and column family: $columnFamily with maxVersions=1")
+          adminClient
+            .createTable(
+              CreateTableRequest
+                .of(tableName)
+                .addFamily(columnFamily, GCRules.GCRULES.maxVersions(1))
+            )
+        }
         val key = new ImmutableBytesWritable()
-        reader = new SequenceFile.Reader(conf, Reader.file(inFile), Reader.bufferSize(4096))
+        reader = new SequenceFile.Reader(hadoopConfig, Reader.file(inFile), Reader.bufferSize(4096))
         while(reader.next(key)) {
-          println("Key " + new String(key.get()))
-          val value: Result = reader.getCurrentValue(new Result).asInstanceOf[Result]
-          println("Value " + value)
+          val rowKeyBytes = key.get
+          val value: Result = reader
+            .getCurrentValue(new Result)
+            .asInstanceOf[Result]
+          if (printData) {
+            println("Key: " + new String(key.get()))
+            println("Value: " + value.toString.take(debugPrintTakeBytes))
+          }
           for {
             cell <- value.listCells()
           } {
-            // Debug printing for now
-            println(s"getFamilyArray; ${new String(cell.getFamilyArray)}")
-            println(s"getQualifierArray: ${new String(cell.getQualifierArray)}")
-            println(s"getTimestamp: ${cell.getTimestamp}")
-            println(s"getValueArray: ${new String(cell.getValueArray)}")
-            // wip
+            val familyString: String = new String(cell.getFamilyArray)
+            val qualifierBytes: Array[Byte] = cell.getQualifierArray
+            val timestampMicros: Long = cell.getTimestamp * 1000
+            val valueBytes: Array[Byte] = cell.getValueArray
+            // Debug printing
+            if (printData) {
+              println(s"getFamilyArray; $familyString")
+              println(s"getQualifierArray: ${new String(qualifierBytes)}")
+              println(s"timestampMicros: $timestampMicros")
+              println(s"getValueArray: ${new String(valueBytes.take(debugPrintTakeBytes))}")
+            }
+            // Note assuming that table and column families are already created
+            val rowMutation = RowMutation
+              .create(tableName, toByteString(rowKeyBytes))
+              .setCell(familyString, toByteString(qualifierBytes), timestampMicros, toByteString(valueBytes))
+//            dataClient.mutateRow(rowMutation) // Immediate execution version
+            bulkMutationBatcher.add(rowMutation)
           }
         }
       } finally {
         if(reader != null) {
           reader.close()
+          bulkMutationBatcher.close()
         }
       }
     } catch {
@@ -72,72 +138,4 @@ object Seq2Bigtable {
         t.printStackTrace()
     }
   }
-
-  //  def toByteString(byteBuffer: ByteBuffer) = {
-  //    ByteString.copyFrom(byteBuffer.array())
-  //  }
-
-
-
-  /*
-
-  def foo(): Unit = {
-//    BigtableIO.Write write =
-//      BigtableIO.write()
-//        .withProjectId(options.getBigtableProjectId())
-//        .withInstanceId(options.getBigtableInstanceId())
-//        .withTableId(options.getBigtableTableId());
-
-    /**
-     * Translates {@link BigtableRow} to {@link Mutation}s along with a row key. The mutations are
-     * {@link SetCell}s that set the value for specified cells with family name, column qualifier and
-     * timestamp.
-     */
-    val key: ByteString = toByteString(row.getKey());
-      public KV<ByteString, Iterable<Mutation>> apply(BigtableRow row) {
-        ByteString key = toByteString(row.getKey());
-        // BulkMutation doesn't split rows. Currently, if a single row contains more than 100,000
-        // mutations, the service will fail the request.
-        ImmutableList.Builder<Mutation> mutations = ImmutableList.builder();
-        for (BigtableCell cell : row.getCells()) {
-          SetCell setCell =
-            SetCell.newBuilder()
-              .setFamilyName(cell.getFamily().toString())
-              .setColumnQualifier(toByteString(cell.getQualifier()))
-              .setTimestampMicros(cell.getTimestamp())
-              .setValue(toByteString(cell.getValue()))
-              .build();
-          mutations.add(Mutation.newBuilder().setSetCell(setCell).build());
-        }
-        return KV.of(key, mutations.build());
-      }
-    }
-  }
-   */
-
 }
-
-// https://stackoverflow.com/a/56285436
-// https://stackoverflow.com/questions/44187041/could-not-find-a-serializer-for-the-value-class-org-apache-hadoop-hbase-client/56285436
-// object HbaseDataExport extends LoggingTime{
-//   def main(args: Array[String]): Unit = {
-//     val con = SparkConfig.getProperties()
-//     val sparkConf = SparkConfig.getSparkConf()
-//     val sc = SparkContext.getOrCreate(sparkConf)
-//     val config = HBaseConfiguration.create()
-//     config.setStrings("io.serializations",
-//       config.get("io.serializations"),
-//       "org.apache.hadoop.hbase.mapreduce.MutationSerialization",
-//       "org.apache.hadoop.hbase.mapreduce.ResultSerialization")
-//     val path = "/Users/jhTian/Desktop/hbaseTimeData/part-m-00030"
-//     val path1 = "hdfs://localhost:9000/hbaseTimeData/part-m-00030"
-//
-//     sc.newAPIHadoopFile(path1, classOf[SequenceFileInputFormat[Text, Result]], classOf[Text], classOf[Result], config).foreach(x => {
-//       import collection.JavaConversions._
-//       for (i <- x._2.listCells) {
-//         logger.info(s"family:${Bytes.toString(CellUtil.cloneFamily(i))},qualifier:${Bytes.toString(CellUtil.cloneQualifier(i))},value:${Bytes.toString(CellUtil.cloneValue(i))}")
-//       }
-//     })
-//     sc.stop()
-//   }
-// }
