@@ -33,11 +33,22 @@ object Seq2Bigtable {
     ByteString.copyFrom(byteArray)
   }
 
+  def crackArgs(args: Array[String]): (Boolean, String, String, String) = {
+    if (args(0) == "-v") {
+      (true, args(1), args(2), args(3))
+    } else {
+      (false, args(0), args(1), args(2))
+    }
+  }
+
+
   def main(args: Array[String]): Unit = {
-    val printData = true
-    val seqFile: String = args(0)
-    val tableName: String = args(1)
-    val columnFamily: String = args(2)
+    val (
+      printData: Boolean,
+      seqFile: String,
+      tableName: String,
+      columnFamily: String
+    ) = crackArgs(args)
     println(s"Reading Sequence file $seqFile and writing to table $tableName in column family: $columnFamily")
     val appConfig: Config = ConfigFactory.load()
     val bigtableEmulatorHost = appConfig.getString("seq2bigtable.emulator_host")

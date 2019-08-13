@@ -4,6 +4,7 @@ Read an HBase sequence file and write it to the bigtable emulator.
 
 Type `sbt 'run empty-seqfile tmptable v'` to run it with an empty sequence file.
 Type `sbt 'run nonempty-seqfile tmptable v'` to run it with an non-empty sequence file.
+Use `-v` for verbose printing of records: `sbt 'run -v nonempty-seqfile tmptable v'`
 
 It is also possible to create an assembly file for a self-contained jar that can be run on a suitable jvm.
 Use `sbt assembly` to create it.  To run it, use something like
@@ -44,7 +45,7 @@ java.lang.InterruptedException                                                  
         at java.lang.Thread.run(Thread.java:748)                                                                                                │
 [success] Total time: 4 s, completed Aug 13, 2019 4:37:17 PM
 ```
-Output of `sbt 'run nonempty-seqfile tmptable v'` to run it with an non-empty sequence file.
+Output of `sbt 'run -v nonempty-seqfile tmptable v'` to run it with an non-empty sequence file.
 ```sbtshell
 [info] Running com.cphy.seq2bigtable.Seq2Bigtable nonempty-seqfile tmptable v                                                                   │
 Reading Sequence file nonempty-seqfile and writing to table tmptable in column family: v                                                        │
@@ -57,7 +58,7 @@ cable                                                                           
 Key: dxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0vxxxxxxA4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx3cxxxxxxxxxxxxxxxb146102400000014610240000001461110400000        │
 Value: keyvalues={dxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0\x1Fvxxxxxx\x1FA4xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx3\x1Fcxxxxxxxxxxxxxxxb\x1F1461024000000\x1F1│
 461024000000\x1F1461110400000/v:v/1563503181101/Put/vlen=191682/seqid=0/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx                         │
-getFamilyArray; v                                                                                                                               │
+getFamilyArray; v
 getQualifierArray: v                                                                                                                            │
 timestampMicros: 1563503181101000                                                                                                               │
 getValueArray: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx│
