@@ -1,0 +1,20 @@
+image: registry.gitlab.com/aboyett/sbt-docker-builder/master:latest
+
+stages:
+- build
+
+compile:
+  stage: build
+  cache:
+    key: build-cache
+    paths:
+    - .ivy2
+    - .sbt
+  script:
+  - >
+    sbt
+    'compile'
+    'assembly'
+  artifacts:
+    paths:
+    - target/scala*/*.jar
