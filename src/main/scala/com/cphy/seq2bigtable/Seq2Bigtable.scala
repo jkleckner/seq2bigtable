@@ -133,6 +133,11 @@ object Seq2Bigtable {
             bulkMutationBatcher.add(rowMutation)
           }
         }
+      } catch {
+        case t: Throwable =>
+          println(s"Caught Throwable: Message: ${t.getMessage}")
+          t.printStackTrace()
+          throw t
       } finally {
         if(reader != null) {
           reader.close()

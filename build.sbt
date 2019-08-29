@@ -3,7 +3,7 @@ scalacOptions += "-deprecation"
 
 name := "seq2bigtable"
 organization := "com.cphy"
-version := "1.0"
+// version := "1.0"
 
 // https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x
 libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-2.x" % "1.12.0"
