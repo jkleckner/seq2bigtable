@@ -2,6 +2,9 @@
 
 Read an HBase sequence file and write it to the bigtable emulator.
 
+Set the `BIGTABLE_EMULATOR_HOST` environment variable to the endpoint to use such
+as `host_running_emulator:8086`
+
 Type `sbt 'run empty-seqfile tmptable v'` to run it with an empty sequence file.
 Type `sbt 'run nonempty-seqfile tmptable v'` to run it with an non-empty sequence file.
 Use `-v` for verbose printing of records: `sbt 'run -v nonempty-seqfile tmptable v'`

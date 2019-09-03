@@ -5,11 +5,19 @@ name := "seq2bigtable"
 organization := "com.cphy"
 // version := "1.0"
 
+// Force the use of various package versions and then in the assembly phase take the first version found
 // https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x
-libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-2.x" % "1.12.0"
+libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-2.x-shaded" % "1.12.0"
 libraryDependencies += "org.apache.hbase" % "hbase-mapreduce" % "2.2.0" // For ResultSerialization
 libraryDependencies += "com.typesafe" % "config" % "1.2.1"
-//libraryDependencies += "com.google.cloud" % "google-cloud-bigtable" % "0.101.0"
+// libraryDependencies += "com.google.cloud" % "google-cloud-bigtable" % "0.106.0"
+libraryDependencies += "com.google.cloud" % "google-cloud-bigtable" % "0.107.0"
+libraryDependencies += "com.google.guava" % "guava" % "28.1-jre"
+// https://mvnrepository.com/artifact/com.google.android/annotations
+libraryDependencies += "com.google.android" % "annotations" % "4.1.1.4" % "provided"
+// https://mvnrepository.com/artifact/org.apache.commons/commons-lang3
+libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.9"
+
 
 mainClass in assembly := Some("com.cphy.seq2bigtable.Seq2Bigtable")
 
@@ -25,6 +33,10 @@ assemblyMergeStrategy in assembly := {
   case "META-INF/native/liborg_apache_hbase_thirdparty_netty_transport_native_epoll_x86_64.so" => MergeStrategy.first
   case x if x.startsWith("org/apache/hadoop") => MergeStrategy.first
   case x if x.startsWith("org/apache/hbase") => MergeStrategy.first
+  // This is horrible but it seems to work...
+  case x if x.startsWith("org/apache/commons/lang3") => MergeStrategy.first
+  case x if x.startsWith("google/protobuf") => MergeStrategy.first
+  case x if x.startsWith("android/annotation/") => MergeStrategy.first
   case "mozilla/public-suffix-list.txt" => MergeStrategy.first
 //  // Discard module_info.class if using Java 8.  Revisit when upgraded. See: https://stackoverflow.com/a/55557287
 //  // https://github.com/sbt/sbt-assembly/issues/370#issuecomment-496502318

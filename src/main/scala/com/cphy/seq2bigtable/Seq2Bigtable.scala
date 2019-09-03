@@ -2,6 +2,8 @@ package com.cphy.seq2bigtable
 
 import java.io.IOException
 
+import com.google.api.gax.batching.Batcher
+import com.google.cloud.bigtable.data.v2.models.RowMutationEntry
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.conf.Configuration
@@ -14,7 +16,6 @@ import org.apache.hadoop.hbase.mapreduce.{MutationSerialization, ResultSerializa
 
 import com.google.cloud.bigtable.admin.v2.models.CreateTableRequest
 import com.google.cloud.bigtable.admin.v2.{BigtableTableAdminClient, BigtableTableAdminSettings}
-import com.google.cloud.bigtable.data.v2.models.{BulkMutationBatcher, RowMutation}
 import com.google.cloud.bigtable.data.v2.{BigtableDataClient, BigtableDataSettings}
 import com.google.cloud.bigtable.admin.v2.models.GCRules
 
@@ -43,6 +44,8 @@ object Seq2Bigtable {
 
 
   def main(args: Array[String]): Unit = {
+    val projectId = "fake-project"
+    val instanceId = "fake-instance"
     val (
       printData: Boolean,
       seqFile: String,
@@ -51,9 +54,9 @@ object Seq2Bigtable {
     ) = crackArgs(args)
     println(s"Reading Sequence file $seqFile and writing to table $tableName in column family: $columnFamily")
     val appConfig: Config = ConfigFactory.load()
-    val bigtableEmulatorHost = appConfig.getString("seq2bigtable.emulator_host")
-    val bigtableEmulatorPort: Int = bigtableEmulatorHost.split(":")(1).toInt
-    println(s"bigtableEmulatorPort: $bigtableEmulatorPort")
+//    val bigtableEmulatorHost = appConfig.getString("seq2bigtable.emulator_host")
+//    val bigtableEmulatorPort: Int = bigtableEmulatorHost.split(":")(1).toInt
+//    println(s"bigtableEmulatorPort: $bigtableEmulatorPort")
     val debugPrintTakeBytes: Int = 256
 
     val hadoopConfig: Configuration = new Configuration()
@@ -72,18 +75,20 @@ object Seq2Bigtable {
       var reader: SequenceFile.Reader = null
       // bigtable writer:
       val dataSettings: BigtableDataSettings = BigtableDataSettings
-        .newBuilderForEmulator(bigtableEmulatorPort)
-        //    .setProjectId("different-project")
+        .newBuilder
+        .setProjectId(projectId)
+        .setInstanceId(instanceId)
         .build()
       val dataClient: BigtableDataClient = BigtableDataClient.create(dataSettings)
 
       val adminSettings: BigtableTableAdminSettings = BigtableTableAdminSettings
-        .newBuilderForEmulator(bigtableEmulatorPort)
-        //    .setProjectId("different-project")
+        .newBuilder
+        .setProjectId(projectId)
+        .setInstanceId(instanceId)
         .build()
       val adminClient: BigtableTableAdminClient = BigtableTableAdminClient.create(adminSettings)
 
-      val bulkMutationBatcher: BulkMutationBatcher = dataClient.newBulkMutationBatcher()
+      val bulkMutationBatcher: Batcher[RowMutationEntry, Void] = dataClient.newBulkMutationBatcher(tableName)
 
       println(s"Data project: ${adminClient.getProjectId} admin instance: ${adminClient.getInstanceId}")
       println(s"Admin project: ${adminClient.getProjectId} admin instance: ${adminClient.getInstanceId}")
@@ -126,8 +131,8 @@ object Seq2Bigtable {
               println(s"getValueArray: ${new String(valueBytes.take(debugPrintTakeBytes))}")
             }
             // Note assuming that table and column families are already created
-            val rowMutation = RowMutation
-              .create(tableName, toByteString(rowKeyBytes))
+            val rowMutation = RowMutationEntry
+              .create(toByteString(rowKeyBytes))
               .setCell(familyString, toByteString(qualifierBytes), timestampMicros, toByteString(valueBytes))
 //            dataClient.mutateRow(rowMutation) // Immediate execution version
             bulkMutationBatcher.add(rowMutation)
