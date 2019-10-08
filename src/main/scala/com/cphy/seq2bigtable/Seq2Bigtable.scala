@@ -34,29 +34,16 @@ object Seq2Bigtable {
     ByteString.copyFrom(byteArray)
   }
 
-  def crackArgs(args: Array[String]): (Boolean, String, String, String) = {
-    if (args(0) == "-v") {
-      (true, args(1), args(2), args(3))
-    } else {
-      (false, args(0), args(1), args(2))
-    }
-  }
-
-
   def main(args: Array[String]): Unit = {
-    val projectId = "fake-project"
-    val instanceId = "fake-instance"
-    val (
-      printData: Boolean,
-      seqFile: String,
-      tableName: String,
-      columnFamily: String
-    ) = crackArgs(args)
-    println(s"Reading Sequence file $seqFile and writing to table $tableName in column family: $columnFamily")
     val appConfig: Config = ConfigFactory.load()
-//    val bigtableEmulatorHost = appConfig.getString("seq2bigtable.emulator_host")
-//    val bigtableEmulatorPort: Int = bigtableEmulatorHost.split(":")(1).toInt
-//    println(s"bigtableEmulatorPort: $bigtableEmulatorPort")
+    val projectId = appConfig.getString("seq2bigtable.project")
+    val instanceId = appConfig.getString("seq2bigtable.instance")
+    val tableName = appConfig.getString("seq2bigtable.table")
+    val columnFamily = appConfig.getString("seq2bigtable.column_family")
+    val seqFile = appConfig.getString("seq2bigtable.file")
+    val printData = appConfig.getBoolean("seq2bigtable.verbose")
+    println(s"projectId: $projectId instanceId: $instanceId")
+    println(s"Reading Sequence file $seqFile and writing to table $tableName in column family: $columnFamily")
     val debugPrintTakeBytes: Int = 256
 
     val hadoopConfig: Configuration = new Configuration()

@@ -3,16 +3,62 @@
 Read an HBase sequence file and write it to the bigtable emulator.
 
 Set the `BIGTABLE_EMULATOR_HOST` environment variable to the endpoint to use such
-as `export BIGTABLE_EMULATOR_HOST=host_running_emulator:8086`
+as `export BIGTABLE_EMULATOR_HOST=host_running_emulator:8086` or else define the
+project and instance to connect as below.
 
-Type `sbt 'run empty-seqfile tmptable v'` to run it with an empty sequence file.
-Type `sbt 'run nonempty-seqfile tmptable v'` to run it with an non-empty sequence file.
-Use `-v` for verbose printing of records: `sbt 'run -v nonempty-seqfile tmptable v'`
+Define these variables for arguments:
+* (required) seq2bigtable.file or SEQ2BIGTABLE_FILE
+* (required) seq2bigtable.table or SEQ2BIGTABLE_TABLE
+* (required) seq2bigtable.column_family or SEQ2BIGTABLE_COLUMN_FAMILY
+* (optional) seq2bigtable.verbose or SEQ2BIGTABLE_VERBOSE default=false
+* (optional) seq2bigtable.project or SEQ2BIGTABLE_PROJECT default=fake-project
+* (optional) seq2bigtable.instance or SEQ2BIGTABLE_INSTANCE default=fake-instance
 
-It is also possible to create an assembly file for a self-contained jar that can be run on a suitable jvm.
-Use `sbt assembly` to create it.  To run it, use something like
+Create an assembly file with `sbt assembly` then run it as in these examples.
 
-`java -jar target/scala-2.11/seq2bigtable-assembly-*.jar nonempty-seqfile tmptable v`
+Use a running bigtable emulator:
+```
+$(gcloud beta emulators bigtable env-init)
+java \
+ -Dseq2bigtable.file=nonempty-seqfile \
+ -Dseq2bigtable.table=tmptable \
+ -Dseq2bigtable.column_family=v \
+ -Dseq2bigtable.verbose=false \
+ -jar target/scala-2.11/seq2bigtable-assembly-*.jar
+```
+
+Variant using environment variables:
+```
+$(gcloud beta emulators bigtable env-init)
+export SEQ2BIGTABLE_FILE=nonempty-seqfile
+export SEQ2BIGTABLE_TABLE=tmptable
+export SEQ2BIGTABLE_COLUMN_FAMILY=v
+export SEQ2BIGTABLE_VERBOSE=true
+java \
+ -jar target/scala-2.11/seq2bigtable-assembly-*.jar
+```
+Variant defining the environment variable on the command line:
+```
+$(gcloud beta emulators bigtable env-init)
+java \
+ -DSEQ2BIGTABLE_FILE=nonempty-seqfile \
+ -DSEQ2BIGTABLE_TABLE=tmptable \
+ -DSEQ2BIGTABLE_COLUMN_FAMILY=v \
+ -DSEQ2BIGTABLE_VERBOSE=true \
+ -jar target/scala-2.11/seq2bigtable-assembly-*.jar
+```
+
+Connect to a specific bigtable instance:
+```
+java \
+ -Dseq2bigtable.file=nonempty-seqfile \
+ -Dseq2bigtable.table=tmptable \
+ -Dseq2bigtable.column_family=v \
+ -Dseq2bigtable.verbose=false \
+ -Dseq2bigtable.project=myproject \
+ -Dseq2bigtable.instance=myinstance \
+ -jar target/scala-2.11/seq2bigtable-assembly-*.jar
+```
 
 Note the mysterious `InterruptedException` that occurs at exit time
 when run under `sbt` which doesn't happen when the assembly jar is directly executed.
