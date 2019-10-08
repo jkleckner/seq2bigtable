@@ -7,11 +7,12 @@ organization := "com.cphy"
 
 // Force the use of various package versions and then in the assembly phase take the first version found
 // https://mvnrepository.com/artifact/com.google.cloud.bigtable/bigtable-hbase-2.x
-libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-2.x-shaded" % "1.12.0"
+// libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-2.x-shaded" % "1.12.1"
+libraryDependencies += "com.google.cloud.bigtable" % "bigtable-hbase-2.x" % "1.12.1"
 libraryDependencies += "org.apache.hbase" % "hbase-mapreduce" % "2.2.0" // For ResultSerialization
 libraryDependencies += "com.typesafe" % "config" % "1.2.1"
-// libraryDependencies += "com.google.cloud" % "google-cloud-bigtable" % "0.106.0"
-libraryDependencies += "com.google.cloud" % "google-cloud-bigtable" % "0.107.0"
+// https://mvnrepository.com/artifact/com.google.cloud/google-cloud-bigtable
+libraryDependencies += "com.google.cloud" % "google-cloud-bigtable" % "1.0.0"
 libraryDependencies += "com.google.guava" % "guava" % "28.1-jre"
 // https://mvnrepository.com/artifact/com.google.android/annotations
 libraryDependencies += "com.google.android" % "annotations" % "4.1.1.4" % "provided"
