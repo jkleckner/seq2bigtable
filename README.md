@@ -3,7 +3,7 @@
 Read an HBase sequence file and write it to the bigtable emulator.
 
 Set the `BIGTABLE_EMULATOR_HOST` environment variable to the endpoint to use such
-as `host_running_emulator:8086`
+as `export BIGTABLE_EMULATOR_HOST=host_running_emulator:8086`
 
 Type `sbt 'run empty-seqfile tmptable v'` to run it with an empty sequence file.
 Type `sbt 'run nonempty-seqfile tmptable v'` to run it with an non-empty sequence file.
@@ -12,9 +12,10 @@ Use `-v` for verbose printing of records: `sbt 'run -v nonempty-seqfile tmptable
 It is also possible to create an assembly file for a self-contained jar that can be run on a suitable jvm.
 Use `sbt assembly` to create it.  To run it, use something like
 
-`java -jar target/scala-2.11/seq2bigtable-assembly-1.0.jar nonempty-seqfile tmptable v`
+`java -jar target/scala-2.11/seq2bigtable-assembly-*.jar nonempty-seqfile tmptable v`
 
-Note the mysterious `InterruptedException` that occurs at exit time.
+Note the mysterious `InterruptedException` that occurs at exit time
+when run under `sbt` which doesn't happen when the assembly jar is directly executed.
 People on the tubes say this is just HADOOP-12829 and to ignore it...
 https://stackoverflow.com/a/47285004
 
